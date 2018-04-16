@@ -17,6 +17,8 @@ import ddf.minim.*;
 
 Minim       minim;
 Song song;
+String windowName;
+
 
 int FFT_SAMPLES = 1024 * 2;
 int BAR_WIDTH;
@@ -31,6 +33,10 @@ void setup()
     songthread.start();
 
     BAR_WIDTH = 2*width / song.song.mix.size();
+
+    textFont(createFont("Arial", 16));
+
+    windowName = "Rectangular Window";
 }
 
 void draw()
@@ -52,8 +58,54 @@ void draw()
         line(i, 3*height/4 + song.song.right.get(i)*50,
              i+1, 3*height/4 + song.song.right.get(i+1)*50);
     }
+
+    text("The window being used is: " + windowName, 5, 20);
 }
 
+void keyReleased() {
+    WindowFunction newWindow = FFT.NONE;
+    
+    if ( key == '1' ) 
+    {
+        newWindow = FFT.BARTLETT;
+    }
+    else if ( key == '2' )
+    {
+        newWindow = FFT.BARTLETTHANN;
+    }
+    else if ( key == '3' )
+    {
+        newWindow = FFT.BLACKMAN;
+    }
+    else if ( key == '4' )
+    {
+        newWindow = FFT.COSINE;
+    }
+    else if ( key == '5' )
+    {
+        newWindow = FFT.GAUSS;
+    }
+    else if ( key == '6' )
+    {
+        newWindow = FFT.HAMMING;
+    }
+    else if ( key == '7' )
+    {
+        newWindow = FFT.HANN;
+    }
+    else if ( key == '8' )
+    {
+        newWindow = FFT.LANCZOS;
+    }
+    else if ( key == '9' )
+    {
+        newWindow = FFT.TRIANGULAR;
+    }
+  
+    song.fft_l.window(newWindow);
+    song.fft_r.window(newWindow);
+    windowName = newWindow.toString();
+}
 
 /*
  * Wrapper for a minim AudioPlayer with async two-channel FFT
