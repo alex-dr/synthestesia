@@ -16,55 +16,68 @@ import ddf.minim.analysis.*;
 import ddf.minim.*;
 
 Minim       minim;
-AudioPlayer song;
-FFT         fft_left;
-FFT         fft_right;
+Song song;
 
 int FFT_SAMPLES = 1024 * 2;
 int BAR_WIDTH;
 
 void setup()
 {
-  size(2048, 400, P3D);
+    size(2048, 800, P3D);
 
-  minim = new Minim(this);
+    minim = new Minim(this);
+    song = new Song(minim, "example-music/bensound-cute.mp3", FFT_SAMPLES);
+    Thread songthread = new Thread(song);
+    songthread.start();
 
-  // specify that we want the audio buffers of the AudioPlayer
-  // to be 1024 samples long because our FFT needs to have
-  // a power-of-two buffer size and this is a good size.
-  song = minim.loadFile("example-music/bensound-acousticbreeze.mp3", FFT_SAMPLES);
-
-  song.play();
-
-  // create an FFT object that has a time-domain buffer
-  // the same size as song's sample buffer
-  // note that this needs to be a power of two
-  // and that it means the size of the spectrum will be half as large.
-  fft_left = new FFT( song.bufferSize(), song.sampleRate() );
-  fft_right = new FFT( song.bufferSize(), song.sampleRate() );
-
-  BAR_WIDTH = 8;
-
+    BAR_WIDTH = 2*width / song.song.mix.size();
 }
 
 void draw()
 {
-  background(0);
-  stroke(255);
+    background(0);
+    stroke(255);
 
-  fft_left.forward(song.left);
-  fft_right.forward(song.right);
+    for(int i = 0; i < song.fft_l.specSize(); i++)
+    {
+        // draw the line for frequency band i, scaling it up a bit so we can see it
+        rect(i*BAR_WIDTH, height/2, BAR_WIDTH, 0 - song.fft_l.getBand(i)*8);
+        rect(i*BAR_WIDTH, height/2, BAR_WIDTH, 0 + song.fft_r.getBand(i)*8);
+    }
 
-  for(int i = 0; i < fft_left.specSize(); i++)
-  {
-    // draw the line for frequency band i, scaling it up a bit so we can see it
-    rect(i*BAR_WIDTH, height/2 - 1, BAR_WIDTH, 0 - fft_left.getBand(i)*8);
-    rect(i*BAR_WIDTH, height/2 + 1, BAR_WIDTH, 0 + fft_right.getBand(i)*8);
-  }
+    for(int i = 0; i < song.song.left.size() - 1; i++)
+    {
+        line(i, height/4 + song.song.left.get(i)*50,
+             i+1, height/4 + song.song.left.get(i+1)*50);
+        line(i, 3*height/4 + song.song.right.get(i)*50,
+             i+1, 3*height/4 + song.song.right.get(i+1)*50);
+    }
+}
 
-  for(int i = 0; i < song.left.size() - 1; i++)
-  {
-    line(i, height/4 + song.left.get(i)*50, i+1, height/4 + song.left.get(i+1)*50);
-    line(i, 3*height/4 + song.right.get(i)*50, i+1, 3*height/4 + song.right.get(i+1)*50);
-  }
+
+/*
+ * Wrapper for a minim AudioPlayer with async two-channel FFT
+ */
+class Song implements Runnable {
+    public AudioPlayer song;
+    public int num_samples;
+    public FFT fft_l;
+    public FFT fft_r;
+
+    public Song(Minim minim, String filename, int num_samples) {
+        this.num_samples = num_samples;
+        this.song = minim.loadFile(filename, num_samples);
+        this.fft_l = new FFT(this.song.bufferSize(), this.song.sampleRate());
+        this.fft_r = new FFT(this.song.bufferSize(), this.song.sampleRate());
+    }
+
+    @Override
+    public void run() {
+        this.song.play();
+
+        while (true) {
+            this.fft_l.forward(this.song.left);
+            this.fft_r.forward(this.song.right);
+        }
+    }
 }
