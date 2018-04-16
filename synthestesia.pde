@@ -65,43 +65,18 @@ void draw()
 void keyReleased() {
     WindowFunction newWindow = FFT.NONE;
     
-    if ( key == '1' ) 
-    {
-        newWindow = FFT.BARTLETT;
+    switch (key) {
+        case '1': newWindow = FFT.BARTLETT; break;
+        case '2': newWindow = FFT.BARTLETTHANN; break;
+        case '3': newWindow = FFT.BLACKMAN; break;
+        case '4': newWindow = FFT.COSINE; break;
+        case '5': newWindow = FFT.GAUSS; break;
+        case '6': newWindow = FFT.HAMMING; break;
+        case '7': newWindow = FFT.HANN; break;
+        case '8': newWindow = FFT.LANCZOS; break;
+        case '9': newWindow = FFT.TRIANGULAR; break;
     }
-    else if ( key == '2' )
-    {
-        newWindow = FFT.BARTLETTHANN;
-    }
-    else if ( key == '3' )
-    {
-        newWindow = FFT.BLACKMAN;
-    }
-    else if ( key == '4' )
-    {
-        newWindow = FFT.COSINE;
-    }
-    else if ( key == '5' )
-    {
-        newWindow = FFT.GAUSS;
-    }
-    else if ( key == '6' )
-    {
-        newWindow = FFT.HAMMING;
-    }
-    else if ( key == '7' )
-    {
-        newWindow = FFT.HANN;
-    }
-    else if ( key == '8' )
-    {
-        newWindow = FFT.LANCZOS;
-    }
-    else if ( key == '9' )
-    {
-        newWindow = FFT.TRIANGULAR;
-    }
-  
+
     song.fft_l.window(newWindow);
     song.fft_r.window(newWindow);
     windowName = newWindow.toString();
