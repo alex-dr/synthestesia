@@ -23,23 +23,27 @@ String windowName;
  * HARDCODES
  */
 // filename of song, relative to project
-String SONG_NAME = "example-music/bensound-cute.mp3";
+// String SONG_NAME = "example-music/bensound-cute.mp3";
 // String SONG_NAME = "example-music/bensound-buddy.mp3";
 // String SONG_NAME = "example-music/bensound-happyrock.mp3";
+//String SONG_NAME = "example-music/bensound-acousticbreeze.mp3";
+String SONG_NAME = "example-music/bensound-summer.mp3";
 // sample rate of the FFT
 int FFT_SAMPLES = 1024 * 2;
 // Vertical scaling factor, controlled with -/= keys
-int GAIN = 10;
+int GAIN = 2;
 // Number of subdivisions in the color map
 int NUM_COLORS = 256;
+// First index of the spectrum to use
+int MIN_INDEX = 8;
 
 /**
  * DISCOVERED CONSTANTS
  */
 // Elements in the spectrum
 int SPECTRUM_SIZE;
-// Horizontal scaling factor for note bars
-int BAR_WIDTH;
+// Size of each frequency band in the spectrum
+float BANDWIDTH;
 // map integer frequencies to hues
 int[] HUE_MAP;
 // Min/max possible frequency in the spectrum
@@ -51,25 +55,26 @@ int MAX_FREQ;
  */
 void setup()
 {
-    size(2048, 800, P3D);
+    size(2048, 1600, P3D);
     colorMode(HSB, NUM_COLORS);
 
     minim = new Minim(this);
     song = new Song(minim, SONG_NAME, FFT_SAMPLES);
     Thread songthread = new Thread(song);
 
-    BAR_WIDTH = 2*width / song.song.mix.size();
-    SPECTRUM_SIZE = song.fft_l.specSize();
+    SPECTRUM_SIZE = song.fft_l.specSize() - MIN_INDEX;
+    BANDWIDTH = song.fft_l.getBandWidth();
 
     System.out.println("Loaded song name: " + SONG_NAME);
     System.out.println("Song samples: " + FFT_SAMPLES);
     System.out.println("Song specsize: " + SPECTRUM_SIZE);
-    System.out.println("Bar width: " + BAR_WIDTH);
+    System.out.println("Bandwidth: " + song.fft_l.getBandWidth());
 
-    MIN_FREQ = (int) song.fft_l.indexToFreq(0);
+    MIN_FREQ = (int) song.fft_l.indexToFreq(MIN_INDEX);
     MAX_FREQ = (int) song.fft_l.indexToFreq(SPECTRUM_SIZE);
     System.out.println("Min frequency: " + MIN_FREQ);
     System.out.println("Max frequency: " + MAX_FREQ);
+    System.out.println("2nd Frequency: " + song.fft_l.indexToFreq(MIN_INDEX+1));
 
     fillColorMap(song);
     songthread.start();
@@ -143,18 +148,22 @@ int freqToHue(int freq) {
 }
 
 void drawBars() {
-    for(int i = 0; i < SPECTRUM_SIZE; i++)
+    for(int i = MIN_INDEX; i < SPECTRUM_SIZE; i++)
     {
         Note note_l = song.notes_l[i];
         Note note_r = song.notes_r[i];
+
         color col = note_l.getColor();
         stroke(col);
         fill(col);
-        // draw the line for frequency band i, scaling it up a bit so we can see it
+
         float l_height = note_l.scaledMag();
         float r_height = note_r.scaledMag();
-        rect(i*BAR_WIDTH, height/2, BAR_WIDTH, l_height);
-        rect(i*BAR_WIDTH, height/2, BAR_WIDTH, -1*r_height);
+        int lpos = (int) leftPosition(note_l);
+        int rpos = (int) rightPosition(note_l);
+        // System.out.println("Freq: " + note_l.freq + "\tlpos: " + lpos + "\trpos: " + rpos);
+        rect(lpos, height/2, rpos-lpos, l_height);
+        rect(lpos, height/2, rpos-lpos, -1*r_height);
     }
 }
 
@@ -246,13 +255,52 @@ class Note {
     public color getColor() {
         return freqToColor((int) freq);
     }
+
+    public float minFreq() {
+        if ((int) this.freq == MIN_FREQ) {
+            return this.freq;
+        }
+        return this.freq - BANDWIDTH / 2.0;
+    }
+
+    public float maxFreq() {
+        if ((int) this.freq == MAX_FREQ) {
+            return this.freq;
+        }
+        return this.freq + BANDWIDTH / 2.0;
+    }
+}
+
+float log2(float x) {
+    return (float) (Math.log((float) x) / Math.log(2.0f));
+}
+
+float freqToPosition(float freq) {
+    return (
+                (log2(freq) - log2(MIN_FREQ)) / 
+                (log2(MAX_FREQ) - log2(MIN_FREQ))
+            ) * (float) width;
+}
+
+/**
+ * Return the leftmost pixel for this note's box
+ */
+float leftPosition(Note note) {
+    return freqToPosition(note.minFreq());
+}
+
+/**
+ * Return the rightmost pixel for this note's box
+ */
+float rightPosition(Note note) {
+    return freqToPosition(note.maxFreq());
 }
 
 /*
  * Given frequency, get the corresponding color
  */
 color freqToColor(int freq) {
-    return color(HUE_MAP[freq], NUM_COLORS*4, NUM_COLORS);
+    return color(HUE_MAP[freq-MIN_FREQ], NUM_COLORS*4, NUM_COLORS);
 }
 
 void stop()
