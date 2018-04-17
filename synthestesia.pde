@@ -22,6 +22,8 @@ String windowName;
 
 // filename of song, relative to project
 String SONG_NAME = "example-music/bensound-cute.mp3";
+// String SONG_NAME = "example-music/bensound-buddy.mp3";
+// String SONG_NAME = "example-music/bensound-happyrock.mp3";
 // sample rate of the FFT
 int FFT_SAMPLES = 1024 * 2;
 // Horizontal scaling factor for note bars
@@ -32,7 +34,8 @@ int GAIN = 10;
 int NUM_COLORS = 256;
 // map integer frequencies to hues
 int[] HUE_MAP;
-// Maximum possible frequency in the spectrum
+// Min/max possible frequency in the spectrum
+int MIN_FREQ;
 int MAX_FREQ;
 
 void setup()
@@ -50,7 +53,10 @@ void setup()
     System.out.println("Song samples: " + FFT_SAMPLES);
     System.out.println("Song specsize: " + song.fft_l.specSize());
     System.out.println("Bar width: " + BAR_WIDTH);
-    MAX_FREQ = song.fft_l.indexToFreq(song.fft_l.specSize());
+
+    MIN_FREQ = (int) song.fft_l.indexToFreq(0);
+    MAX_FREQ = (int) song.fft_l.indexToFreq(song.fft_l.specSize());
+    System.out.println("Min frequency: " + MIN_FREQ);
     System.out.println("Max frequency: " + MAX_FREQ);
 
     fillColorMap(song);
@@ -65,9 +71,33 @@ void setup()
  * Set COLOR_MAP values for every possible integer frequency
  */
 void fillColorMap(Song song) {
-    COLOR_MAP = new int[MAX_FREQ];
-    for (int i=0; i < MAX_FREQ; i++) {
+    HUE_MAP = new int[MAX_FREQ-MIN_FREQ];
+    for (int i=0; i < MAX_FREQ-MIN_FREQ; i++) {
+        HUE_MAP[i] = freqToHue(i);
     }
+}
+
+/*
+ * Convert an integer frequency to corresponding hue
+ *
+ * Octaves are mapped to hues, so an A2 will have the same hue as an A3 or A4
+ *
+ * For now, we'll just use rainbows. In the future we may get fancy with
+ * the circle of fifths.
+ */
+int freqToHue(int freq) {
+    // Take log_2 of the frequency to map into pitch space
+    // Mod by one because in pitch space octaves are size 1
+    float pitch = (float) (Math.log(freq) / Math.log(2) % 1.);
+    int hew = (int) (pitch * NUM_COLORS);
+    return hew;
+}
+
+/* 
+ * Given frequency, get the corresponding color
+ */
+color freqToColor(int freq) {
+    return color(HUE_MAP[freq], NUM_COLORS*4, NUM_COLORS);
 }
 
 void draw()
@@ -76,15 +106,26 @@ void draw()
     stroke(255);
     fill(255);
 
+    drawBars();
+    drawWaveform();
+    drawDebug();
+}
+
+void drawBars() {
     for(int i = 0; i < song.fft_l.specSize(); i++)
     {
+        color col = freqToColor((int) song.fft_l.indexToFreq(i));
+        stroke(col);
+        fill(col);
         // draw the line for frequency band i, scaling it up a bit so we can see it
         float l_height = (float) (song.fft_l.getBand(i)) * GAIN * (float) Math.log10(i);
         float r_height = (float) (song.fft_r.getBand(i)) * GAIN * (float) Math.log10(i);
         rect(i*BAR_WIDTH, height/2, BAR_WIDTH, l_height);
         rect(i*BAR_WIDTH, height/2, BAR_WIDTH, -1*r_height);
     }
+}
 
+void drawWaveform() {
     stroke(255);
     fill(255);
     for(int i = 0; i < song.song.left.size() - 1; i++)
@@ -94,7 +135,9 @@ void draw()
         line(i, 3*height/4 + song.song.right.get(i)*50,
              i+1, 3*height/4 + song.song.right.get(i+1)*50);
     }
+}
 
+void drawDebug() {
     text("WINDOW:" + windowName, 5, 20);
     text("GAIN: " + GAIN, 5, 40);
 }
