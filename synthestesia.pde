@@ -19,19 +19,27 @@ Minim       minim;
 Song song;
 String windowName;
 
-
+/**
+ * HARDCODES
+ */
 // filename of song, relative to project
 String SONG_NAME = "example-music/bensound-cute.mp3";
 // String SONG_NAME = "example-music/bensound-buddy.mp3";
 // String SONG_NAME = "example-music/bensound-happyrock.mp3";
 // sample rate of the FFT
 int FFT_SAMPLES = 1024 * 2;
-// Horizontal scaling factor for note bars
-int BAR_WIDTH;
 // Vertical scaling factor, controlled with -/= keys
 int GAIN = 10;
 // Number of subdivisions in the color map
 int NUM_COLORS = 256;
+
+/**
+ * DISCOVERED CONSTANTS
+ */
+// Elements in the spectrum
+int SPECTRUM_SIZE;
+// Horizontal scaling factor for note bars
+int BAR_WIDTH;
 // map integer frequencies to hues
 int[] HUE_MAP;
 // Min/max possible frequency in the spectrum
@@ -51,14 +59,15 @@ void setup()
     Thread songthread = new Thread(song);
 
     BAR_WIDTH = 2*width / song.song.mix.size();
+    SPECTRUM_SIZE = song.fft_l.specSize();
 
     System.out.println("Loaded song name: " + SONG_NAME);
     System.out.println("Song samples: " + FFT_SAMPLES);
-    System.out.println("Song specsize: " + song.fft_l.specSize());
+    System.out.println("Song specsize: " + SPECTRUM_SIZE);
     System.out.println("Bar width: " + BAR_WIDTH);
 
     MIN_FREQ = (int) song.fft_l.indexToFreq(0);
-    MAX_FREQ = (int) song.fft_l.indexToFreq(song.fft_l.specSize());
+    MAX_FREQ = (int) song.fft_l.indexToFreq(SPECTRUM_SIZE);
     System.out.println("Min frequency: " + MIN_FREQ);
     System.out.println("Max frequency: " + MAX_FREQ);
 
@@ -133,34 +142,21 @@ int freqToHue(int freq) {
     return hew;
 }
 
-/* 
- * Given frequency, get the corresponding color
- */
-color freqToColor(int freq) {
-    return color(HUE_MAP[freq], NUM_COLORS*4, NUM_COLORS);
-}
-
 void drawBars() {
-    for(int i = 0; i < song.fft_l.specSize(); i++)
+    for(int i = 0; i < SPECTRUM_SIZE; i++)
     {
-        color col = freqToColor((int) song.fft_l.indexToFreq(i));
+        Note note_l = song.notes_l[i];
+        Note note_r = song.notes_r[i];
+        color col = note_l.getColor();
         stroke(col);
         fill(col);
         // draw the line for frequency band i, scaling it up a bit so we can see it
-        float l_height = getBandHeight(song.fft_l, i);
-        float r_height = getBandHeight(song.fft_r, i);
+        float l_height = note_l.scaledMag();
+        float r_height = note_r.scaledMag();
         rect(i*BAR_WIDTH, height/2, BAR_WIDTH, l_height);
         rect(i*BAR_WIDTH, height/2, BAR_WIDTH, -1*r_height);
     }
 }
-
-/*
- * Given sepectrum index i and an FFT, get scaled band height
- */
-float getBandHeight(FFT fft, int index) {
-    return (float) (fft.getBand(index) * GAIN * (float) Math.log10(index));
-}
-    
 
 void drawWaveform() {
     stroke(255);
@@ -187,12 +183,26 @@ class Song implements Runnable {
     public int num_samples;
     public FFT fft_l;
     public FFT fft_r;
+    public Note[] notes_l;
+    public Note[] notes_r;
+
+    public boolean ready;
 
     public Song(Minim minim, String filename, int num_samples) {
+        this.ready = false;
         this.num_samples = num_samples;
         this.song = minim.loadFile(filename, num_samples);
+        // init fft's
         this.fft_l = new FFT(this.song.bufferSize(), this.song.sampleRate());
         this.fft_r = new FFT(this.song.bufferSize(), this.song.sampleRate());
+        this.fft_l.forward(this.song.left);
+        this.fft_r.forward(this.song.right);
+
+        // init notes
+        notes_l = new Note[num_samples];
+        notes_r = new Note[num_samples];
+        this.updateNotes();
+        this.ready = true;
     }
 
     @Override
@@ -202,8 +212,47 @@ class Song implements Runnable {
         while (true) {
             this.fft_l.forward(this.song.left);
             this.fft_r.forward(this.song.right);
+            this.updateNotes();
         }
     }
+
+    private void updateNotes() {
+        for (int i=0; i < SPECTRUM_SIZE; i++) {
+            float freq = this.fft_l.indexToFreq(i);
+            notes_l[i] = new Note(freq, this.fft_l.getBand(i));
+            notes_r[i] = new Note(freq, this.fft_r.getBand(i));
+        }
+    }
+}
+
+/**
+ * Representation of a note
+ */
+class Note {
+    // Frequency of note in Hz
+    private float freq;
+    // Raw magnitude of note from fft
+    private float mag;
+
+    public Note(float freq, float mag) {
+        this.freq = freq;
+        this.mag = mag;
+    }
+
+    public float scaledMag() {
+        return (float) (this.mag * GAIN * (float) Math.log10(freq));
+    }
+
+    public color getColor() {
+        return freqToColor((int) freq);
+    }
+}
+
+/*
+ * Given frequency, get the corresponding color
+ */
+color freqToColor(int freq) {
+    return color(HUE_MAP[freq], NUM_COLORS*4, NUM_COLORS);
 }
 
 void stop()
