@@ -29,8 +29,8 @@ String windowName;
 // String SONG_NAME = "example-music/bensound-acousticbreeze.mp3";
 // String SONG_NAME = "example-music/bensound-summer.mp3";
 // String SONG_NAME = "my-music/bach-ave-maria.mp3";
-// String SONG_NAME = "my-music/clair-de-lune.mp3";
-String SONG_NAME = "my-music/gjeilo-ubi-caritas.mp3";
+String SONG_NAME = "my-music/clair-de-lune.mp3";
+// String SONG_NAME = "my-music/gjeilo-ubi-caritas.mp3";
 // String SONG_NAME = "my-music/bach-dazu-ist.mp3";
 // sample rate of the FFT
 int FFT_SAMPLES = 1024 * 4;
@@ -40,6 +40,13 @@ int GAIN = 2;
 int NUM_COLORS = 256;
 // First index of the spectrum to use
 int MIN_INDEX = 8;
+
+public enum Mode {
+    LINEIN,
+    MUSIC
+}
+
+Mode PLAY_MODE = Mode.MUSIC;
 
 /**
  * DISCOVERED CONSTANTS
@@ -192,19 +199,25 @@ void drawDebug() {
  * Wrapper for a minim AudioPlayer with async two-channel FFT
  */
 class Song implements Runnable {
+
     public AudioPlayer song;
+
     public int num_samples;
     public FFT fft_l;
     public FFT fft_r;
     public Note[] notes_l;
     public Note[] notes_r;
 
-    public boolean ready;
-
     public Song(Minim minim, String filename, int num_samples) {
-        this.ready = false;
+        /*
+        if (PLAY_MODE == Mode.LINEIN)
+            this.song = minim.getLineIn();
+         */
+        if (PLAY_MODE == Mode.MUSIC)
+            this.song = minim.loadFile(filename, num_samples);
+
         this.num_samples = num_samples;
-        this.song = minim.loadFile(filename, num_samples);
+
         // init fft's
         this.fft_l = new FFT(this.song.bufferSize(), this.song.sampleRate());
         this.fft_r = new FFT(this.song.bufferSize(), this.song.sampleRate());
@@ -215,12 +228,13 @@ class Song implements Runnable {
         notes_l = new Note[num_samples];
         notes_r = new Note[num_samples];
         this.updateNotes();
-        this.ready = true;
     }
 
     @Override
     public void run() {
-        this.song.play();
+        if (PLAY_MODE == Mode.MUSIC) {
+            this.song.play();
+        }
 
         while (true) {
             this.fft_l.forward(this.song.left);
@@ -308,7 +322,7 @@ color freqToColor(int freq) {
 }
 
 color freqToColor(int freq, float mag) {
-    return color(HUE_MAP[freq-MIN_FREQ], (int) (Math.log10(mag)*NUM_COLORS*Math.log10(freq)), NUM_COLORS);
+    return color(HUE_MAP[freq-MIN_FREQ], (int) (Math.log10(mag)*NUM_COLORS*Math.log10(freq)/4.), NUM_COLORS);
 }
 
 void stop()
