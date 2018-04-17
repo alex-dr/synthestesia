@@ -20,30 +20,61 @@ Song song;
 String windowName;
 
 
+// filename of song, relative to project
+String SONG_NAME = "example-music/bensound-cute.mp3";
+// sample rate of the FFT
 int FFT_SAMPLES = 1024 * 2;
+// Horizontal scaling factor for note bars
 int BAR_WIDTH;
+// Vertical scaling factor, controlled with -/= keys
 int GAIN = 10;
+// Number of subdivisions in the color map
+int NUM_COLORS = 256;
+// map integer frequencies to hues
+int[] HUE_MAP;
+// Maximum possible frequency in the spectrum
+int MAX_FREQ;
 
 void setup()
 {
     size(2048, 800, P3D);
+    colorMode(HSB, NUM_COLORS);
 
     minim = new Minim(this);
-    song = new Song(minim, "example-music/bensound-cute.mp3", FFT_SAMPLES);
+    song = new Song(minim, SONG_NAME, FFT_SAMPLES);
     Thread songthread = new Thread(song);
-    songthread.start();
 
     BAR_WIDTH = 2*width / song.song.mix.size();
+
+    System.out.println("Loaded song name: " + SONG_NAME);
+    System.out.println("Song samples: " + FFT_SAMPLES);
+    System.out.println("Song specsize: " + song.fft_l.specSize());
+    System.out.println("Bar width: " + BAR_WIDTH);
+    MAX_FREQ = song.fft_l.indexToFreq(song.fft_l.specSize());
+    System.out.println("Max frequency: " + MAX_FREQ);
+
+    fillColorMap(song);
+    songthread.start();
 
     textFont(createFont("Arial", 16));
 
     windowName = "Rectangular Window";
 }
 
+/*
+ * Set COLOR_MAP values for every possible integer frequency
+ */
+void fillColorMap(Song song) {
+    COLOR_MAP = new int[MAX_FREQ];
+    for (int i=0; i < MAX_FREQ; i++) {
+    }
+}
+
 void draw()
 {
     background(0);
     stroke(255);
+    fill(255);
 
     for(int i = 0; i < song.fft_l.specSize(); i++)
     {
@@ -54,6 +85,8 @@ void draw()
         rect(i*BAR_WIDTH, height/2, BAR_WIDTH, -1*r_height);
     }
 
+    stroke(255);
+    fill(255);
     for(int i = 0; i < song.song.left.size() - 1; i++)
     {
         line(i, height/4 + song.song.left.get(i)*50,
