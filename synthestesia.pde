@@ -22,6 +22,7 @@ String windowName;
 
 int FFT_SAMPLES = 1024 * 2;
 int BAR_WIDTH;
+int GAIN = 10;
 
 void setup()
 {
@@ -47,8 +48,10 @@ void draw()
     for(int i = 0; i < song.fft_l.specSize(); i++)
     {
         // draw the line for frequency band i, scaling it up a bit so we can see it
-        rect(i*BAR_WIDTH, height/2, BAR_WIDTH, 0 - song.fft_l.getBand(i)*8);
-        rect(i*BAR_WIDTH, height/2, BAR_WIDTH, 0 + song.fft_r.getBand(i)*8);
+        float l_height = (float) (song.fft_l.getBand(i)) * GAIN * (float) Math.log10(i);
+        float r_height = (float) (song.fft_r.getBand(i)) * GAIN * (float) Math.log10(i);
+        rect(i*BAR_WIDTH, height/2, BAR_WIDTH, l_height);
+        rect(i*BAR_WIDTH, height/2, BAR_WIDTH, -1*r_height);
     }
 
     for(int i = 0; i < song.song.left.size() - 1; i++)
@@ -59,7 +62,8 @@ void draw()
              i+1, 3*height/4 + song.song.right.get(i+1)*50);
     }
 
-    text("The window being used is: " + windowName, 5, 20);
+    text("WINDOW:" + windowName, 5, 20);
+    text("GAIN: " + GAIN, 5, 40);
 }
 
 void keyReleased() {
@@ -75,6 +79,8 @@ void keyReleased() {
         case '7': newWindow = FFT.HANN; break;
         case '8': newWindow = FFT.LANCZOS; break;
         case '9': newWindow = FFT.TRIANGULAR; break;
+        case '=': GAIN += 1; break;
+        case '-': GAIN -= 1; break;
     }
 
     song.fft_l.window(newWindow);
@@ -107,4 +113,13 @@ class Song implements Runnable {
             this.fft_r.forward(this.song.right);
         }
     }
+}
+
+void stop()
+{
+    // always close Minim audio classes when you finish with them
+    song.song.close();
+    minim.stop();
+
+    super.stop();
 }
