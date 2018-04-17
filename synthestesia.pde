@@ -26,10 +26,14 @@ String windowName;
 // String SONG_NAME = "example-music/bensound-cute.mp3";
 // String SONG_NAME = "example-music/bensound-buddy.mp3";
 // String SONG_NAME = "example-music/bensound-happyrock.mp3";
-//String SONG_NAME = "example-music/bensound-acousticbreeze.mp3";
-String SONG_NAME = "example-music/bensound-summer.mp3";
+// String SONG_NAME = "example-music/bensound-acousticbreeze.mp3";
+// String SONG_NAME = "example-music/bensound-summer.mp3";
+// String SONG_NAME = "my-music/bach-ave-maria.mp3";
+// String SONG_NAME = "my-music/clair-de-lune.mp3";
+String SONG_NAME = "my-music/gjeilo-ubi-caritas.mp3";
+// String SONG_NAME = "my-music/bach-dazu-ist.mp3";
 // sample rate of the FFT
-int FFT_SAMPLES = 1024 * 2;
+int FFT_SAMPLES = 1024 * 4;
 // Vertical scaling factor, controlled with -/= keys
 int GAIN = 2;
 // Number of subdivisions in the color map
@@ -253,7 +257,7 @@ class Note {
     }
 
     public color getColor() {
-        return freqToColor((int) freq);
+        return freqToColor((int) this.freq, this.mag);
     }
 
     public float minFreq() {
@@ -301,6 +305,10 @@ float rightPosition(Note note) {
  */
 color freqToColor(int freq) {
     return color(HUE_MAP[freq-MIN_FREQ], NUM_COLORS*4, NUM_COLORS);
+}
+
+color freqToColor(int freq, float mag) {
+    return color(HUE_MAP[freq-MIN_FREQ], (int) (Math.log10(mag)*NUM_COLORS*Math.log10(freq)), NUM_COLORS);
 }
 
 void stop()
