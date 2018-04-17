@@ -38,6 +38,9 @@ int[] HUE_MAP;
 int MIN_FREQ;
 int MAX_FREQ;
 
+/**
+ * Processing Framework functions
+ */
 void setup()
 {
     size(2048, 800, P3D);
@@ -66,6 +69,43 @@ void setup()
 
     windowName = "Rectangular Window";
 }
+
+void draw()
+{
+    background(0);
+    stroke(255);
+    fill(255);
+
+    drawBars();
+    drawWaveform();
+    drawDebug();
+}
+
+void keyReleased() {
+    WindowFunction newWindow = FFT.NONE;
+    
+    switch (key) {
+        case '1': newWindow = FFT.BARTLETT; break;
+        case '2': newWindow = FFT.BARTLETTHANN; break;
+        case '3': newWindow = FFT.BLACKMAN; break;
+        case '4': newWindow = FFT.COSINE; break;
+        case '5': newWindow = FFT.GAUSS; break;
+        case '6': newWindow = FFT.HAMMING; break;
+        case '7': newWindow = FFT.HANN; break;
+        case '8': newWindow = FFT.LANCZOS; break;
+        case '9': newWindow = FFT.TRIANGULAR; break;
+        case '=': GAIN += 1; break;
+        case '-': GAIN -= 1; break;
+    }
+
+    song.fft_l.window(newWindow);
+    song.fft_r.window(newWindow);
+    windowName = newWindow.toString();
+}
+
+/**
+ * Utility Methods
+ */
 
 /*
  * Set COLOR_MAP values for every possible integer frequency
@@ -100,17 +140,6 @@ color freqToColor(int freq) {
     return color(HUE_MAP[freq], NUM_COLORS*4, NUM_COLORS);
 }
 
-void draw()
-{
-    background(0);
-    stroke(255);
-    fill(255);
-
-    drawBars();
-    drawWaveform();
-    drawDebug();
-}
-
 void drawBars() {
     for(int i = 0; i < song.fft_l.specSize(); i++)
     {
@@ -118,12 +147,20 @@ void drawBars() {
         stroke(col);
         fill(col);
         // draw the line for frequency band i, scaling it up a bit so we can see it
-        float l_height = (float) (song.fft_l.getBand(i)) * GAIN * (float) Math.log10(i);
-        float r_height = (float) (song.fft_r.getBand(i)) * GAIN * (float) Math.log10(i);
+        float l_height = getBandHeight(song.fft_l, i);
+        float r_height = getBandHeight(song.fft_r, i);
         rect(i*BAR_WIDTH, height/2, BAR_WIDTH, l_height);
         rect(i*BAR_WIDTH, height/2, BAR_WIDTH, -1*r_height);
     }
 }
+
+/*
+ * Given sepectrum index i and an FFT, get scaled band height
+ */
+float getBandHeight(FFT fft, int index) {
+    return (float) (fft.getBand(index) * GAIN * (float) Math.log10(index));
+}
+    
 
 void drawWaveform() {
     stroke(255);
@@ -140,28 +177,6 @@ void drawWaveform() {
 void drawDebug() {
     text("WINDOW:" + windowName, 5, 20);
     text("GAIN: " + GAIN, 5, 40);
-}
-
-void keyReleased() {
-    WindowFunction newWindow = FFT.NONE;
-    
-    switch (key) {
-        case '1': newWindow = FFT.BARTLETT; break;
-        case '2': newWindow = FFT.BARTLETTHANN; break;
-        case '3': newWindow = FFT.BLACKMAN; break;
-        case '4': newWindow = FFT.COSINE; break;
-        case '5': newWindow = FFT.GAUSS; break;
-        case '6': newWindow = FFT.HAMMING; break;
-        case '7': newWindow = FFT.HANN; break;
-        case '8': newWindow = FFT.LANCZOS; break;
-        case '9': newWindow = FFT.TRIANGULAR; break;
-        case '=': GAIN += 1; break;
-        case '-': GAIN -= 1; break;
-    }
-
-    song.fft_l.window(newWindow);
-    song.fft_r.window(newWindow);
-    windowName = newWindow.toString();
 }
 
 /*
