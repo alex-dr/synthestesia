@@ -27,9 +27,9 @@ String windowName;
 // String SONG_NAME = "example-music/bensound-buddy.mp3";
 // String SONG_NAME = "example-music/bensound-happyrock.mp3";
 // String SONG_NAME = "example-music/bensound-acousticbreeze.mp3";
-// String SONG_NAME = "example-music/bensound-summer.mp3";
+String SONG_NAME = "example-music/bensound-summer.mp3";
 // String SONG_NAME = "my-music/bach-ave-maria.mp3";
-String SONG_NAME = "my-music/clair-de-lune.mp3";
+// String SONG_NAME = "my-music/clair-de-lune.mp3";
 // String SONG_NAME = "my-music/gjeilo-ubi-caritas.mp3";
 // String SONG_NAME = "my-music/bach-dazu-ist.mp3";
 // sample rate of the FFT
@@ -66,7 +66,7 @@ int MAX_FREQ;
  */
 void setup()
 {
-    size(2048, 1600, P3D);
+    size(2048, 800, P3D);
     colorMode(HSB, NUM_COLORS);
 
     minim = new Minim(this);
@@ -170,8 +170,8 @@ void drawBars() {
 
         float l_height = note_l.scaledMag();
         float r_height = note_r.scaledMag();
-        int lpos = (int) leftPosition(note_l);
-        int rpos = (int) rightPosition(note_l);
+        int lpos = (int) (leftPosition(note_l) * (float) width);
+        int rpos = (int) (rightPosition(note_l) * (float) width);
         // System.out.println("Freq: " + note_l.freq + "\tlpos: " + lpos + "\trpos: " + rpos);
         rect(lpos, height/2, rpos-lpos, l_height);
         rect(lpos, height/2, rpos-lpos, -1*r_height);
@@ -179,14 +179,33 @@ void drawBars() {
 }
 
 void drawWaveform() {
-    stroke(255);
-    fill(255);
-    for(int i = 0; i < song.song.left.size() - 1; i++)
+    float minFreq = song.fft_l.indexToFreq((int) SPECTRUM_SIZE / 4);
+    float maxFreq = song.fft_l.indexToFreq((int) SPECTRUM_SIZE);
+    for(int i = SPECTRUM_SIZE/4; i < SPECTRUM_SIZE; i++)
     {
-        line(i, height/4 + song.song.left.get(i)*50,
-             i+1, height/4 + song.song.left.get(i+1)*50);
-        line(i, 3*height/4 + song.song.right.get(i)*50,
-             i+1, 3*height/4 + song.song.right.get(i+1)*50);
+        Note note_l = song.notes_l[i];
+        Note note_r = song.notes_r[i];
+
+        color col = note_l.getColor();
+        stroke(col);
+        fill(col);
+
+        float l_height = note_l.scaledMag();
+        float r_height = note_r.scaledMag();
+        int lpos = width - (int) ((freqToPosition(note_l.minFreq(), minFreq, maxFreq)) * (float) width);
+        int rpos = width - (int) ((freqToPosition(note_l.maxFreq(), minFreq, maxFreq)) * (float) width);
+
+        // TODO: normalize waveform scale while preserving spectrum scale. Not easy!
+        float l_center = height/4 + song.song.left.get(i)*height/8;
+        float r_center = 3*height/4 + song.song.right.get(i)*height/8;
+        rect(lpos, l_center - l_height/2, rpos-lpos, l_height);
+        rect(rpos, r_center - r_height/2, rpos-rpos, r_height);
+        /*
+        line(i, height/4 + song.song.left.get(i)*height/8,
+             i+1, height/4 + song.song.left.get(i+1)*height/8);
+        line(i, 3*height/4 + song.song.right.get(i)*height/8,
+             i+1, 3*height/4 + song.song.right.get(i+1)*height/8);
+        */
     }
 }
 
@@ -293,11 +312,22 @@ float log2(float x) {
     return (float) (Math.log((float) x) / Math.log(2.0f));
 }
 
+/**
+ * Relative horizontal position scaled to pitch space
+ * Returns [0,1]
+ */
 float freqToPosition(float freq) {
     return (
-                (log2(freq) - log2(MIN_FREQ)) / 
+                (log2(freq) - log2(MIN_FREQ)) /
                 (log2(MAX_FREQ) - log2(MIN_FREQ))
-            ) * (float) width;
+            );
+}
+
+float freqToPosition(float freq, float minFreq, float maxFreq) {
+    return (
+                (log2(freq) - log2(minFreq)) /
+                (log2(maxFreq) - log2(minFreq))
+            );
 }
 
 /**
