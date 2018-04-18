@@ -24,7 +24,7 @@ String windowName;
  */
 // filename of song, relative to project
 // String SONG_NAME = "example-music/bensound-cute.mp3";
-// String SONG_NAME = "example-music/bensound-buddy.mp3";
+//  String SONG_NAME = "example-music/bensound-buddy.mp3";
 // String SONG_NAME = "example-music/bensound-happyrock.mp3";
 // String SONG_NAME = "example-music/bensound-acousticbreeze.mp3";
 String SONG_NAME = "example-music/bensound-summer.mp3";
@@ -32,6 +32,13 @@ String SONG_NAME = "example-music/bensound-summer.mp3";
 // String SONG_NAME = "my-music/clair-de-lune.mp3";
 // String SONG_NAME = "my-music/gjeilo-ubi-caritas.mp3";
 // String SONG_NAME = "my-music/bach-dazu-ist.mp3";
+// String SONG_NAME = "my-music/frequency-decree-kawaii.mp3";
+// String SONG_NAME = "my-music/blue-wave-theory-living-nightmare.mp3";
+// String SONG_NAME = "my-music/that-crooner-from-nowhere-fun-fat-fun.mp3";
+// String SONG_NAME = "my-music/kimiko-ishizaka-variatio-5a1-ovvero-2-clav.mp3";
+// String SONG_NAME = "my-music/james-kibbie-bwv-549-prelude-and-fugue-in-c-minor-2-fuga.mp3";
+// String SONG_NAME = "my-music/bach-cello-suite-5-1-prelude.mp3";
+// String SONG_NAME = "my-music/bach-cello-suite-2-1-prelude.mp3";
 // sample rate of the FFT
 int FFT_SAMPLES = 1024 * 4;
 // Vertical scaling factor, controlled with -/= keys
@@ -179,16 +186,16 @@ void drawBars() {
 }
 
 void drawWaveform() {
-    float minFreq = song.fft_l.indexToFreq((int) SPECTRUM_SIZE / 4);
+    int waveformRangeFactor = 8;
+    float minFreq = song.fft_l.indexToFreq((int) SPECTRUM_SIZE / waveformRangeFactor);
     float maxFreq = song.fft_l.indexToFreq((int) SPECTRUM_SIZE);
-    for(int i = SPECTRUM_SIZE/4; i < SPECTRUM_SIZE; i++)
+    for(int i = SPECTRUM_SIZE/waveformRangeFactor; i < SPECTRUM_SIZE; i++)
     {
         Note note_l = song.notes_l[i];
         Note note_r = song.notes_r[i];
 
-        color col = note_l.getColor();
-        stroke(col);
-        fill(col);
+        color lcol = note_l.getColor();
+        color rcol = note_r.getColor();
 
         float l_height = note_l.scaledMag();
         float r_height = note_r.scaledMag();
@@ -198,8 +205,12 @@ void drawWaveform() {
         // TODO: normalize waveform scale while preserving spectrum scale. Not easy!
         float l_center = height/4 + song.song.left.get(i)*height/8;
         float r_center = 3*height/4 + song.song.right.get(i)*height/8;
+        stroke(lcol);
+        fill(lcol);
         rect(lpos, l_center - l_height/2, rpos-lpos, l_height);
-        rect(rpos, r_center - r_height/2, rpos-rpos, r_height);
+        stroke(rcol);
+        fill(rcol);
+        rect(rpos, r_center - r_height/2, rpos-lpos, r_height);
         /*
         line(i, height/4 + song.song.left.get(i)*height/8,
              i+1, height/4 + song.song.left.get(i+1)*height/8);
