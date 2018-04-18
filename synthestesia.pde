@@ -40,13 +40,25 @@ String SONG_NAME = "example-music/bensound-summer.mp3";
 // String SONG_NAME = "my-music/bach-cello-suite-5-1-prelude.mp3";
 // String SONG_NAME = "my-music/bach-cello-suite-2-1-prelude.mp3";
 // sample rate of the FFT
-int FFT_SAMPLES = 1024 * 4;
+int FFT_SAMPLES = 1024 * 2;
 // Vertical scaling factor, controlled with -/= keys
 int GAIN = 2;
 // Number of subdivisions in the color map
 int NUM_COLORS = 256;
 // First index of the spectrum to use
 int MIN_INDEX = 8;
+// display extra debug info
+boolean DEBUG = true;
+
+// which spectrum mapping to use for pitch -> color
+public enum SpecType {
+    // ROY G BIV is my man
+    RAINBOW,
+    // Circle of Fifths Coloring
+    COF
+}
+
+SpecType SPECTYPE = SpecType.RAINBOW;
 
 public enum Mode {
     LINEIN,
@@ -139,32 +151,6 @@ void keyReleased() {
  * Utility Methods
  */
 
-/*
- * Set COLOR_MAP values for every possible integer frequency
- */
-void fillColorMap(Song song) {
-    HUE_MAP = new int[MAX_FREQ-MIN_FREQ];
-    for (int i=0; i < MAX_FREQ-MIN_FREQ; i++) {
-        HUE_MAP[i] = freqToHue(i);
-    }
-}
-
-/*
- * Convert an integer frequency to corresponding hue
- *
- * Octaves are mapped to hues, so an A2 will have the same hue as an A3 or A4
- *
- * For now, we'll just use rainbows. In the future we may get fancy with
- * the circle of fifths.
- */
-int freqToHue(int freq) {
-    // Take log_2 of the frequency to map into pitch space
-    // Mod by one because in pitch space octaves are size 1
-    float pitch = (float) (Math.log(freq) / Math.log(2) % 1.);
-    int hew = (int) (pitch * NUM_COLORS);
-    return hew;
-}
-
 void drawBars() {
     for(int i = MIN_INDEX; i < SPECTRUM_SIZE; i++)
     {
@@ -223,6 +209,18 @@ void drawWaveform() {
 void drawDebug() {
     text("WINDOW:" + windowName, 5, 20);
     text("GAIN: " + GAIN, 5, 40);
+
+    if (DEBUG == true) {
+        for (int i=0; i<HUE_MAP.length; i++) {
+            color col = color(HUE_MAP[i],
+                              NUM_COLORS*4,
+                              NUM_COLORS);
+            stroke(col);
+            fill(col);
+            int boxwidth = 2;
+            rect(20 + i*boxwidth, 15*height/16, boxwidth, height/32);
+        }
+    }
 }
 
 /*
@@ -319,6 +317,18 @@ class Note {
     }
 }
 
+/*
+ * Set HUE_MAP values for all pitches
+ */
+void fillColorMap(Song song) {
+    HUE_MAP = new int[NUM_COLORS];
+    for (int i=0; i < NUM_COLORS; i++) {
+        if (SPECTYPE == SpecType.RAINBOW) {
+            HUE_MAP[i] = i;
+        }
+    }
+}
+
 float log2(float x) {
     return (float) (Math.log((float) x) / Math.log(2.0f));
 }
@@ -342,6 +352,18 @@ float freqToPosition(float freq, float minFreq, float maxFreq) {
 }
 
 /**
+ * Given a frequency in Hz, normalize to pitch space
+ *
+ * The resulting value will be in [0, 1], with A440 being at 0
+ */
+float normalizeFrequency(float freq) {
+    float normFreq = ((log2(freq) % 1f) - (log2(440f) % 1f) + 1f) % 1f;
+    assert normFreq >= 0 : "less than 0: " + freq + "\t" + normFreq;
+    assert normFreq <= 1 : "more than 1: " + freq + "\t" + normFreq;
+    return normFreq;
+}
+
+/**
  * Return the leftmost pixel for this note's box
  */
 float leftPosition(Note note) {
@@ -359,16 +381,20 @@ float rightPosition(Note note) {
  * Given frequency, get the corresponding color
  */
 color freqToColor(int freq) {
-    return color(HUE_MAP[freq-MIN_FREQ], NUM_COLORS*4, NUM_COLORS);
+    int hueIndex = (int) (normalizeFrequency(freq) * NUM_COLORS);
+    return color(HUE_MAP[hueIndex],
+                 NUM_COLORS*4,
+                 NUM_COLORS);
 }
 
 color freqToColor(int freq, float mag) {
-    return color(HUE_MAP[freq-MIN_FREQ], (int) (Math.log10(mag)*NUM_COLORS*Math.log10(freq)/4.), NUM_COLORS);
+    int hueIndex = (int) (normalizeFrequency(freq) * NUM_COLORS);
+    return color(HUE_MAP[hueIndex],
+                 (int) (Math.log10(mag)*NUM_COLORS*Math.log10(freq)/4.),
+                 NUM_COLORS);
 }
 
-void stop()
-{
-    // always close Minim audio classes when you finish with them
+void stop() {
     song.song.close();
     minim.stop();
 
