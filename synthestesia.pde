@@ -140,6 +140,14 @@ void keyReleased() {
         case '9': newWindow = FFT.TRIANGULAR; break;
         case '=': GAIN += 1; break;
         case '-': GAIN -= 1; break;
+        case 'r':
+            SPECTYPE = SpecType.RAINBOW;
+            fillColorMap(song);
+            break;
+        case 'c':
+            SPECTYPE = SpecType.COF;
+            fillColorMap(song);
+            break;
     }
 
     song.fft_l.window(newWindow);
@@ -355,6 +363,8 @@ float freqToPosition(float freq, float minFreq, float maxFreq) {
  * Given a frequency in Hz, normalize to pitch space
  *
  * The resulting value will be in [0, 1], with A440 being at 0
+ *
+ * Used to index into the HUE_MAP to get pitch color
  */
 float normalizeFrequency(float freq) {
     float normFreq = ((log2(freq) % 1f) - (log2(440f) % 1f) + 1f) % 1f;
