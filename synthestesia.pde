@@ -27,8 +27,8 @@ String windowName;
 //  String SONG_NAME = "example-music/bensound-buddy.mp3";
 // String SONG_NAME = "example-music/bensound-happyrock.mp3";
 // String SONG_NAME = "example-music/bensound-acousticbreeze.mp3";
-String SONG_NAME = "example-music/bensound-summer.mp3";
-// String SONG_NAME = "my-music/bach-ave-maria.mp3";
+// String SONG_NAME = "example-music/bensound-summer.mp3";
+String SONG_NAME = "my-music/bach-ave-maria.mp3";
 // String SONG_NAME = "my-music/clair-de-lune.mp3";
 // String SONG_NAME = "my-music/gjeilo-ubi-caritas.mp3";
 // String SONG_NAME = "my-music/bach-dazu-ist.mp3";
@@ -42,7 +42,7 @@ String SONG_NAME = "example-music/bensound-summer.mp3";
 // sample rate of the FFT
 int FFT_SAMPLES = 1024 * 2;
 // Vertical scaling factor, controlled with -/= keys
-int GAIN = 2;
+int GAIN = 1;
 // Number of subdivisions in the color map
 int NUM_COLORS = 256;
 // First index of the spectrum to use
@@ -52,9 +52,7 @@ boolean DEBUG = true;
 
 // which spectrum mapping to use for pitch -> color
 public enum SpecType {
-    // ROY G BIV is my man
     RAINBOW,
-    // Circle of Fifths Coloring
     COF
 }
 
@@ -205,12 +203,6 @@ void drawWaveform() {
         stroke(rcol);
         fill(rcol);
         rect(rpos, r_center - r_height/2, rpos-lpos, r_height);
-        /*
-        line(i, height/4 + song.song.left.get(i)*height/8,
-             i+1, height/4 + song.song.left.get(i+1)*height/8);
-        line(i, 3*height/4 + song.song.right.get(i)*height/8,
-             i+1, 3*height/4 + song.song.right.get(i+1)*height/8);
-        */
     }
 }
 
@@ -225,7 +217,7 @@ void drawDebug() {
                               NUM_COLORS);
             stroke(col);
             fill(col);
-            int boxwidth = 2;
+            int boxwidth = (int) 1024.0/NUM_COLORS;
             rect(20 + i*boxwidth, 15*height/16, boxwidth, height/32);
         }
     }
@@ -245,10 +237,11 @@ class Song implements Runnable {
     public Note[] notes_r;
 
     public Song(Minim minim, String filename, int num_samples) {
+
         /*
         if (PLAY_MODE == Mode.LINEIN)
             this.song = minim.getLineIn();
-         */
+        */
         if (PLAY_MODE == Mode.MUSIC)
             this.song = minim.loadFile(filename, num_samples);
 
@@ -329,11 +322,20 @@ class Note {
  * Set HUE_MAP values for all pitches
  */
 void fillColorMap(Song song) {
-    HUE_MAP = new int[NUM_COLORS];
-    for (int i=0; i < NUM_COLORS; i++) {
-        if (SPECTYPE == SpecType.RAINBOW) {
+    if (SPECTYPE == SpecType.RAINBOW) {
+        System.out.println("SPECTYPE RAINBOW");
+        NUM_COLORS = 256;
+        colorMode(HSB, NUM_COLORS);
+        HUE_MAP = new int[NUM_COLORS];
+        for (int i=0; i < NUM_COLORS; i++) {
             HUE_MAP[i] = i;
         }
+    } else
+    if (SPECTYPE == SpecType.COF) {
+        System.out.println("SPECTYPE COF");
+        NUM_COLORS = 12;
+        colorMode(HSB, NUM_COLORS);
+        HUE_MAP = new int[]{1, 7, 2, 9, 4, 11, 6, 2, 8, 3, 10, 5};
     }
 }
 
@@ -342,7 +344,7 @@ float log2(float x) {
 }
 
 /**
- * Relative horizontal position scaled to pitch space
+ * Relative horizontal position scaled to the spectrum pitch space
  * Returns [0,1]
  */
 float freqToPosition(float freq) {
@@ -367,7 +369,7 @@ float freqToPosition(float freq, float minFreq, float maxFreq) {
  * Used to index into the HUE_MAP to get pitch color
  */
 float normalizeFrequency(float freq) {
-    float normFreq = ((log2(freq) % 1f) - (log2(440f) % 1f) + 1f) % 1f;
+    float normFreq = ((log2(freq) % 1f) - (log2(440f) % 1f) + 1f - 1f/24f) % 1f;
     assert normFreq >= 0 : "less than 0: " + freq + "\t" + normFreq;
     assert normFreq <= 1 : "more than 1: " + freq + "\t" + normFreq;
     return normFreq;
